@@ -3,94 +3,51 @@
 This repository is the companion demo for the freeCodeCamp article:  
 👉 **[How to Use the GitHub CLI with GitHub Actions](https://preview.freecodecamp.org/6a47f33cd74594a1f2e8160f)**
 
-It demonstrates how to replace third-party GitHub Marketplace actions with GitHub's native **GitHub CLI (`gh`)** for releases, issues, and automated comments.
+It demonstrates how to automate GitHub tasks using GitHub's built-in **GitHub CLI (`gh`)** without relying on third-party marketplace actions.
 
 ---
 
-## Why Use GitHub CLI in Workflows?
+## What This Demo Does
 
-As covered in the article, many developers reach for third-party marketplace actions for simple tasks like opening an issue or creating a release. Using the built-in `gh` CLI instead gives you:
+1. **Auto Comment on New Issues** ([`issue-comment.yml`](.github/workflows/issue-comment.yml)):  
+   Whenever a new issue is opened, GitHub Actions automatically uses `gh issue comment` to post a welcoming reply to the author.
 
-1. **Better Security & Zero Supply Chain Risk**: Built and maintained directly by GitHub—no risk from abandoned or compromised third-party actions.
-2. **Pre-Installed on Runners**: `gh` is already installed and ready on all GitHub-hosted runners (`ubuntu-latest`, `windows-latest`, `macos-latest`).
-3. **Zero Maintenance**: No need to manage version bumps or review Dependabot PRs for minor action upgrades.
-4. **Native Shell Power**: Standard shell commands with full flexibility for flags, dynamic variables, and custom scripts.
-
----
-
-## Workflows in this Repository
-
-### 1. Build, Deploy & Release Workflow (`.github/workflows/deploy.yml`)
-Runs on push to `main` or manual trigger via `workflow_dispatch`:
-* **Builds** an asset (`dist/app.txt`) using standard Linux commands (`mkdir`, `echo`, `date`).
-* **Deploys** the application (with a `simulate_failure` toggle to easily test both branches).
-* **On Success (`if: success()`):**
-  * Publishes a new GitHub Release with the build asset attached using `gh release create`.
-  * Opens a success notification Issue using `gh issue create`.
-* **On Failure (`if: failure()`):**
-  * Opens a failure report Issue with direct links to workflow logs using `gh issue create`.
-
-### 2. Auto-Comment on New Issues (`.github/workflows/issue-comment.yml`)
-Runs automatically whenever anyone opens a new Issue (`on: issues: types: [opened]`):
-* Greets the author by their GitHub username (`@${{ github.event.issue.user.login }}`).
-* Posts a welcoming comment on the issue using `gh issue comment`.
+2. **Deploy & Release Automation** ([`deploy.yml`](.github/workflows/deploy.yml)):
+   - **On Success:** Creates a release with build assets using `gh release create` and opens an announcement issue using `gh issue create`.
+   - **On Failure:** Opens an issue reporting deployment failure with direct run logs using `gh issue create`.
 
 ---
 
-## Permissions Required
+## How to Test with GitHub CLI
 
-Both workflows use GitHub Actions' built-in `GH_TOKEN: ${{ github.token }}` and declare the minimum necessary permissions:
+### 1. Test Auto-Comment on Issues
 
-```yaml
-permissions:
-  contents: write  # Needed by deploy.yml to publish releases & assets
-  issues: write    # Needed by both workflows to create and comment on issues
-```
-
-> [!NOTE]
-> Make sure your GitHub repository allows Actions to write to the repository:
-> Go to **Settings → Actions → General → Workflow permissions** and select **Read and write permissions**.
-
----
-
-## Quickstart & CLI Commands
-
-### 1. Initialize and Push to GitHub
+Create a new issue directly from your terminal:
 
 ```bash
-git init
-git add .
-git commit -m "feat: initial commit for actions demo"
-git branch -M main
-
-# Create the public GitHub repository and push
-gh repo create github-actions-deploy-demo --public --source=. --remote=origin --push
+gh issue create --title "Hello from terminal" --body "Testing the auto-comment action."
 ```
 
-### 2. Test the Deploy Workflow
-
-```bash
-# Test the Success path (Creates Release + Success Issue)
-gh workflow run deploy.yml
-
-# Test the Failure path (Simulates Error + Creates Failure Issue)
-gh workflow run deploy.yml -f simulate_failure=true
-
-# Inspect the results
-gh release list
-gh issue list
-```
-
-### 3. Test Auto-Comment on New Issues
-
-Open a new issue from the terminal:
-
-```bash
-gh issue create --title "Testing auto comment" --body "Hello from the CLI!"
-```
-
-The `issue-comment.yml` workflow will trigger immediately and add an automated welcome comment. Check it with:
+GitHub Actions will trigger automatically and post a comment. Check it with:
 
 ```bash
 gh issue view 1 --comments
+```
+
+### 2. Test Deploy & Release Workflow
+
+Run the workflow manually from the CLI:
+
+```bash
+# Run success path (creates a Release + Success Issue)
+gh workflow run deploy.yml
+
+# Run failure path (simulates failure + creates Failure Issue)
+gh workflow run deploy.yml -f simulate_failure=true
+```
+
+View the generated release:
+
+```bash
+gh release list
 ```
