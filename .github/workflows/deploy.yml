@@ -1,0 +1,64 @@
+name: Deploy and Release Demo
+
+# 1. Triggers: Run on push to main or run manually from the GitHub UI
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: 'Simulate a failure (to test issue creation)'
+        type: boolean
+        default: false
+
+# 2. Permissions: Allow the workflow to create releases and issues
+permissions:
+  contents: write  # Needed to create releases and upload assets
+  issues: write    # Needed to create issues on failure
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository code
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Step 2: Build application (generates dist/app.txt using Linux commands)
+      - name: Build application
+        run: |
+          mkdir -p dist
+          echo "Hello World!" > dist/app.txt
+          echo "Build Date: $(date -u)" >> dist/app.txt
+          echo "Workflow Run: #${{ github.run_number }}" >> dist/app.txt
+
+      # Step 3: Deploy application (or simulate failure for testing)
+      - name: Deploy application
+        run: |
+          echo "Starting deployment..."
+          if [ "${{ inputs.simulate_failure }}" = "true" ]; then
+            echo "Error: Deployment failed!"
+            exit 1
+          fi
+          echo "Deployment finished successfully!"
+
+      # Step 4: Run only if deployment succeeds
+      - name: Create GitHub Release
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" dist/app.txt \
+            --title "Release v1.0.${{ github.run_number }}" \
+            --notes "Automated release created by GitHub Actions."
+
+      # Step 5: Run only if deployment fails
+      - name: Create Issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "Deployment failed for run #${{ github.run_number }}" \
+            --body "The deployment failed. Check workflow logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
