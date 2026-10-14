@@ -1,0 +1,26 @@
+name: Auto Comment on New Issues
+
+# Trigger this workflow whenever a new issue is opened
+on:
+  issues:
+    types: [opened]
+
+# Grant permission to write comments on issues
+permissions:
+  issues: write
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Use GitHub CLI (gh) to add a comment to the new issue
+      - name: Add welcoming comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --body "👋 Hello @$AUTHOR! Thank you for opening this issue. We have received it and will look into it shortly."
